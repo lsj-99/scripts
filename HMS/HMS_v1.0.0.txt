@@ -1,0 +1,185 @@
+#!/bin/bash
+
+. HMS.cfg
+
+version=1.0.0
+Count=0
+
+log(){
+
+FullDate=`date +%F`
+FullTime=`date +%T`
+Year=`date +%Y`
+Month=`date +%m`
+day=`date +%d`
+
+echo HMS,$version,$FullDate,$FullTime,$1,$2 >> $LogPath/$Year-$Month/$Year-$Month-$day"_HMS.log"
+
+}
+
+CountCheck(){
+
+let Count+=1
+
+if [ $Count -ge $MainNodeVODServerCount ]
+then
+	Count=0
+fi
+
+}
+
+ConfigCopy(){
+
+FrozenNodeHitcountPath=`cat /usr/local/castis/CiLoadBalancer.cfg | grep Hitcount_History_File | cut -d= -f2`
+FrozenNodeGradeInfoPath=`cat /usr/local/castis/lfm.cfg | grep Grade_Info_File | cut -d= -f2`
+
+cp $FrozenNodeGradeInfoPath /usr/local/castis/HMS/.FrozenNodeGradeInfo
+CopySuccessCheck /usr/local/castis/HMS/.FrozenNodeGradeInfo FrozenNodeGradeInfo
+
+cp $FrozenNodeHitcountPath /usr/local/castis/HMS/.FrozenNodeHitcount
+CopySuccessCheck /usr/local/castis/HMS/.FrozenNodeHitcount FrozenNodeHitcount
+
+}
+
+CopySuccessCheck(){
+
+if [ -e $1 ]
+then
+	log Info "$2 Copy Success"
+else
+	log Fail "$2 Copy Fail"
+fi
+
+}
+
+CopyContentToDMC(){
+
+expect <<EOF
+set timeout 3
+spawn ssh -o StrictHostKeyChecking=no root@$1 "$2"
+expect "password:"
+	send "castis\r"
+expect eof
+EOF
+
+}
+
+CopyCheckTread(){
+
+TimeOutCheck=0
+cd /usr/local/castis/HMS/LBFileExist
+
+while true
+do
+	/usr/local/castis/HMS/LBFileExist/LBFileExist > /usr/local/castis/HMS/.copyresult
+	cat /usr/local/castis/HMS/.copyresult | grep "file exist" > /dev/null 2> /dev/null
+	if [ $? -eq 0 ]
+	then
+		log Info "$1 upload success. Remove $1 In Frozen Node [$2]"
+		LBFileDel $FrozenNodeLSMServerIP $1
+		break
+	else
+		log Info "$1 wait..... [$2]"
+		let TimeOutCheck+=$CopyCheckPerSec;
+		if [ $TimeOutCheck -ge $StatusCheckTimeout ]
+		then
+			log Fail "$1 upload Fail. Start Next Job. [$2]"
+			break
+		fi
+		sleep $CopyCheckPerSec
+	fi
+done
+
+}
+
+CheckAlreadyExistInDMC(){
+
+for list in `cat /usr/local/castis/HMS/HitSourceList_mpg`
+do
+	cat /usr/local/castis/HMS/.DMCHitcount | grep $list, | cut -d, -f1 >> /usr/local/castis/HMS/AlreadyExistList
+done
+
+if [ -s /usr/local/castis/HMS/AlreadyExistList ]
+then
+	cp /usr/local/castis/HMS/AlreadyExistList /usr/local/castis/HMS/SourceBackup/$1/AlreadyExistList.$2
+	log Info "Already Exist List Check"
+	for mpg_delete in `cat /usr/local/castis/HMS/AlreadyExistList`
+	do
+		log Warn "$mpg_delete is Already Exist In DMC"
+	done
+fi
+
+}
+
+LBFileDel(){
+
+/usr/local/castis/tools/LBFileDel/LBFileDel $1 $2
+
+}
+
+Main(){
+
+Year=`date +%Y`
+Month=`date +%m`
+day=`date +%d`
+Hour=`date +%H`
+
+[ ! -d $LogPath/$Year-$Month ] && mkdir -p $LogPath/$Year-$Month
+[ ! -d /usr/local/castis/HMS/SourceBackup/$Year-$Month ] && mkdir -p /usr/local/castis/HMS/SourceBackup/$Year-$Month
+
+rm -f /usr/local/castis/HMS/.FrozenNodeGradeInfo 2> /dev/null
+rm -f /usr/local/castis/HMS/.FrozenNodeHitcount 2> /dev/null
+rm -f /usr/local/castis/HMS/HitSourceList 2> /dev/null
+rm -f /usr/local/castis/HMS/.DMCHitcount 2> /dev/null
+rm -f /usr/local/castis/HMS/AlreadyExistList 2> /dev/null
+
+
+echo LBIP=$MainNodeLSMServerIP > /usr/local/castis/HMS/LBFileExist/TestCase_LocalFileExist_lbip.txt
+
+log Info "HMS Start"
+ConfigCopy
+
+cat /usr/local/castis/HMS/.FrozenNodeGradeInfo | grep -v filename | head -$MoveContentCount > /usr/local/castis/HMS/GradeSourceList
+cp /usr/local/castis/HMS/GradeSourceList /usr/local/castis/HMS/SourceBackup/$Year-$Month/GradeSourceList.$Year-$Month-$day-$Hour
+
+for mpg in `cat /usr/local/castis/HMS/GradeSourceList | awk '{print $1}'`
+do
+	cat /usr/local/castis/HMS/.FrozenNodeHitcount | grep $mpg, >> /usr/local/castis/HMS/HitSourceList
+done
+
+cp /usr/local/castis/HMS/HitSourceList /usr/local/castis/HMS/SourceBackup/$Year-$Month/HitSourceList.$Year-$Month-$day-$Hour
+sed -i 's/ /,/g' /usr/local/castis/HMS/HitSourceList
+
+cat /usr/local/castis/HMS/HitSourceList | cut -d, -f1 > /usr/local/castis/HMS/HitSourceList_mpg
+
+/usr/local/castis/tools/SampleNetIODownloader $MainNodeLSMServerIP /usr/local/castis/HMS/.DMCHitcount $MainNodeHitCountPath/.hitcount.history 50000000
+CopySuccessCheck /usr/local/castis/HMS/.DMCHitcount DMCHitcount
+
+CheckAlreadyExistInDMC $Year-$Month $Year-$Month-$day-$Hour
+
+for mpg in `cat /usr/local/castis/HMS/HitSourceList_mpg`
+do
+	SourceIP=`cat /usr/local/castis/HMS/HitSourceList | grep $mpg, | cut -d, -f5`
+	for((i=1;i<=$CopyCount;i++))
+	do
+		TransactionID=`date +%s`
+		DestinationIP=`cat /usr/local/castis/HMS/HMS.cfg | grep MainNodeVODServer$Count | cut -d= -f2 | cut -d, -f1`
+		DestinationDir=`cat /usr/local/castis/HMS/HMS.cfg | grep MainNodeVODServer$Count | cut -d= -f2 | cut -d, -f2`
+		log Info "$SourceIP $mpg --> $DestinationIP $DestinationDir/$mpg copy start!!!! [$TransactionID]  "
+		CopyContentToDMC $SourceIP "/usr/local/castis/tools/SampleNetIOUploader $DestinationIP /data*/$mpg $DestinationDir/$mpg $CopyBitrate"
+		echo $mpg > /usr/local/castis/HMS/LBFileExist/TestCase_LocalFileExist_filename.txt
+		CopyCheckTread $mpg $TransactionID
+		CountCheck
+	done
+done
+
+}
+
+let Polling_Time=$Running_Period_Hour*60*60
+
+while true
+do
+	Main
+	log Info "Schedule Finished....."
+	sleep $Polling_Time
+done

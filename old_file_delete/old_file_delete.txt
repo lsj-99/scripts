@@ -1,0 +1,83 @@
+#!/bin/bash
+
+###############
+
+LSM_IP=192.168.43.9
+ContentLeafStoreDays=270
+
+###############
+
+version=Old_File_Delete_v1.0.1
+tool_path=/usr/local/castis/tools
+result_path=`dirname $0`
+local_ip=`ifconfig bond0 | grep "inet addr" | cut -d":" -f2 | cut -d" " -f1`
+mkdir $result_path/logs 2> /dev/null
+
+log(){
+
+today=`date +%Y-%m-%d`
+log_date=`date +%F,%T`
+
+echo $version,$log_date,$1,$2 >> $result_path/logs/$today.log
+
+}
+
+Src_Down(){
+
+log Information "Hitcount Download Start"
+$tool_path/SampleNetIODownloader $LSM_IP $result_path/.hitcount /data2/FailOver/.hitcount.history 100000000 2> $result_path/.down_result
+
+cat $result_path/.down_result | grep -i fail > /dev/null 2> /dev/null
+if [ $? -eq 0 ]
+then
+        log Fail "Hitcount Download Fail"
+        echo "Hitcount Download Fail"
+        exit
+else
+        log Success "Hitcount Download Success"
+fi
+
+}
+
+Create_Remove_List(){
+
+limit_date=`date +%s -d "$ContentLeafStoreDays days ago"`
+today=`date +%Y-%m-%d`
+
+log Information "Create Remove List..."
+echo "mpg          creation_date   file_size        Copy_count" > $result_path/"$today"_remove_list
+cat $result_path/.hitcount | grep $local_ip | egrep ^'M0|M4|P0' | awk -F, -v limit_date=$limit_date '$2 < limit_date {print $1,$2,$4,$6}' >> $result_path/"$today"_remove_list
+
+Remove_list_size=`cat $result_path/"$today"_remove_list | awk -F" " '{sum+=$3} END{print sum/1024/1024/1024" GB"}'`
+Remove_list_count=`cat $result_path/"$today"_remove_list | grep .mpg | wc -l`
+echo "Remove_list_count=$Remove_list_count Remove_list_size=$Remove_list_size" >> $result_path/"$today"_remove_list
+log Information "Remove_list_count=$Remove_list_count Remove_list_size=$Remove_list_size"
+log Information "Create Remove List Done!"
+
+}
+
+Remove_Old_Contents(){
+
+today=`date +%Y-%m-%d`
+
+cat $result_path/"$today"_remove_list | grep mpg > /dev/null 2> /dev/null
+if [ $? -eq 0 ]
+then
+        log Information "Remove Start"
+        for list in `cat $result_path/"$today"_remove_list | grep -v _size | awk '{print $1}'`
+        do
+                rm -f /data/$list
+                log Information "$list Remove"
+        done
+        log Information "Remove Finish"
+else
+        log Fail "There are no Remove List"
+fi
+
+}
+
+log Information "Start $version"
+Src_Down
+Create_Remove_List
+Remove_Old_Contents
+log Information "Finish $version"

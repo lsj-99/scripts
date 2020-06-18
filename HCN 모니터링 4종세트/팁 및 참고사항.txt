@@ -1,0 +1,15 @@
+expect 추가시켜서 작업했음
+
+No such File or Directory 문구에서 such 부분을 grep -v 해서 파일이 없으면 나오지 않게함
+-> DMC LSM에서 srm로그나 vod로그가 없어서 의미없는 info가 찍히기 떄문에 수정함.
+
+일반적이게 하루에 1번돌면서 로그가 남게했으며 1회이상 돌아도 상관없음(로그가 겹치긴함)
+
+start -> 3개 실행함(Filne Not Found, Adv File Not Found, No Media 체크)
+vodcmd -> vodcmd 실행하여 error상태인 vod 서버 찾아냄
+
+결과파일은 info에 날짜별로 쌓임
+
+log부분에는 월별 백업되어 있고, 각각 4개의 디렉토리에 최신 장애파일(?)이 있으며
+
+back디렉토리 안에는 분단위로 백업이 가능하게 제작했음

@@ -1,0 +1,18 @@
+#!/bin/sh
+
+FileList=list
+HitCount=Hit
+
+sed -i "s/ /,/g" $HitCount
+
+rm -f *.list
+for list in `cat $FileList`
+do
+        cat $HitCount |grep -w $list > /dev/null 2> /dev/null
+        if [ $? -eq 0 ]
+        then
+                echo $list >> `cat $HitCount |grep -w $list |cut -d , -f5`.list
+        else
+                echo $list >> NotExist.list
+        fi
+done

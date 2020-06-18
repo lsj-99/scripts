@@ -1,0 +1,30 @@
+설치 : 각 SO Relay 서버
+
+Frozen_IP=172.16.13.12
+	//Frozen 노드 LSM의 ip
+Frozen_Hitcount_Path=/home/castis/Hit
+	//Frozen 노드 LSM의 hitcount 경로 ex)/data1/FailOver
+	//.hitcount.history는 기입하지 않는다.
+Relay_Lb_Log_Path=/home/castis/test/log
+	//자신의 LB EventLog Path ex) /var/log/castis/lb
+LogCollect_In_Day=1
+	//로그 수집 일자
+	//1일은 어제와 현재시간까지의 로그를 수집하여 계산함
+Content_Hit=100
+	//최소 Hit 수 ex) Content_Hit=3 3hit 이상인 컨텐츠들을 대상으로 결과 생성
+Job_Path=/home/castis/HitChecker
+	//스크립트가 존재하는곳
+	//결과 파일이외의 다른 파일도 생성됨
+Log_Path=/home/castis/HitChecker/log
+	//Log 경로
+Backup_Dir=/home/castis/HitChecker/Backup
+	//result파일 생성후 백업할 경로
+Tool_Path=/usr/local/castis/tools
+	//SampleNetIO tool 경로
+
+#Move Option
+Move_result_file=1
+	//0일경우 아래 Result_File_Path로 결과 파일이 바로 move됨
+	//1일경우 Job_Path에 생성됨
+Result_File_Path=/data/FailOver
+	//Result 파일을 move할 경로

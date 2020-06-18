@@ -1,0 +1,32 @@
+설치 : 각 SO Relay 서버
+
+Frozen_ip=172.16.13.12
+	//Frozen 노드의 LSM의 ip
+Frozen_path=/home/castis/Push_test
+	//Frozen 노드의 Destination 경로(SimpleContentDeliver가 바라보고 있는 경로로 설정)
+Watch_Dir=/gfmtmp
+	//감시경로
+Check_Time_In_Sec=5
+	//감시 주기
+Copy_Bitrate=100000000
+	//배포 속도
+Log_Dir=/var/log/castis/Push
+	//Log 경로
+Max_Count=1
+	//n개일때 부터 동작을 시작
+Tool_Path=/usr/local/castis/tools
+	//SampleNetIO tool 경로
+
+#Link File Delete Option
+Link_File_Delte=0
+	//옵션이 0일경우 아래 Link_File_Path의 기존 링크 파일을 삭제함
+	//옵션이 1일경우 기존 링크 파일을 삭제하지 않음
+Link_File_Path=/data1
+	//링크파일이 존재하는 경로
+
+#Move To Error Directory Option
+Move_To_Error_Directroy=1
+	//옵션이 0일경우 배포 실패시 아래 Move_To_Error_Path 경로로 해당 컨텐츠를 이동시킴
+	//옵션이 1일경우 배포 실패시 해당 컨텐츠를 재 배포시도함(무한대)
+Move_To_Error_Path=/gfmtmp/error
+	//배포 실패시 해당 컨텐츠를 이동할 경로

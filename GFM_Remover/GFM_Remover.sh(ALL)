@@ -1,0 +1,287 @@
+#!/bin/bash
+
+#LB_ip,Limit Size(GB)
+
+#####Config#####
+
+Node_Count=6
+LB1=CB,192.168.113.40,97236
+LB2=BS,192.168.118.130,92294
+LB3=KB,192.168.123.130,86341
+LB4=KH,192.168.117.130,81465
+LB5=SR,192.168.124.130,108567
+LB6=GA,192.168.34.210,80385
+
+GFM_Cfg_Path="/usr/local/castis/CiGFMServer.cfg"
+ToDoPathFromToDoFileThread=/home/castis/GFM_Remover/Transaction/ToDo
+ToDoPath=/home/castis/GFM_Remover_2
+Tool_Path=/usr/local/castis/tools
+Log_Dir=/home/castis/GFM_Remover/log
+SuccessPath=/home/castis/GFM_Remover/Transaction/Success
+ErrorPath=/home/castis/GFM_Remover/Transaction/Error
+GFMInfoPath=/home/castis/GFM_Remover/Transaction/GFMInfo
+SemiToDoPath_back=/home/castis/GFM_Remover/Transaction/SemiTodo
+NewContentsPath=/home/castis/GFM_Remover/Transaction/NewContents
+passiveInfoPath=/home/castis/GFM_Remover/Transaction/passiveInfo
+Max_Remove_Count=500
+
+###############
+
+SystemPath=`cat $GFM_Cfg_Path | grep SystemPath | cut -d= -f2`
+SemiToDoPath=`cat $GFM_Cfg_Path | grep SemiToDoPath | cut -d= -f2`
+Script_Path=$0
+sumhit=`ls -tr $SemiToDoPath | grep sumhit | tail -1`
+today=`date +%Y%m%d`
+month=`date +%Y-%m`
+date=`date +%F" "%T`
+
+Dir_Check(){
+
+[ ! -d  $ToDoPathFromToDoFileThread ] && mkdir -p $ToDoPathFromToDoFileThread > /dev/null 2> /dev/null
+[ ! -d  $ToDoPath ] && mkdir -p $ToDoPath > /dev/null 2> /dev/null
+[ ! -d  $Log_Dir/$month ] && mkdir -p $Log_Dir/$month > /dev/null 2> /dev/null
+[ ! -d  $SuccessPath ] && mkdir -p $SuccessPath > /dev/null 2> /dev/null
+[ ! -d  $ErrorPath ] && mkdir -p $ErrorPath > /dev/null 2> /dev/null
+[ ! -d  $GFMInfoPath ] && mkdir -p $GFMInfoPath > /dev/null 2> /dev/null
+[ ! -d  $SemiToDoPath_back ] && mkdir -p $SemiToDoPath_back > /dev/null 2> /dev/null
+[ ! -d  $NewContentsPath ] && mkdir -p $NewContentsPath > /dev/null 2> /dev/null
+[ ! -d  $passiveInfoPath ] && mkdir -p $passiveInfoPath > /dev/null 2> /dev/null
+
+}
+
+Log(){
+
+cur_time=`date +%F,%T`
+log_today=`date +%F`
+
+echo $cur_time,$1,$2 >> $Log_Dir/$month/$log_today.log
+
+}
+
+Check(){
+
+cat $1 | grep -i fail > /dev/null 2> /dev/null
+        if [ $? -eq 0 ]
+        then
+                Log $2 "$3 $4 Fail!!"
+        else
+                Log $2 "$3 $4 Success!!"
+        fi
+
+}
+
+Src_Down(){
+
+rm -f $ToDoPathFromToDoFileThread/.$1_Compare_Done > /dev/null 2> /dev/null
+
+$Tool_Path/SampleNetIODownloader $1 $ToDoPathFromToDoFileThread/.$1_lb.cfg /usr/local/castis/lb.cfg 100000000 2> $ToDoPathFromToDoFileThread/.$1_lb_down_result
+Check "$ToDoPathFromToDoFileThread/.$1_lb_down_result" "$1" "lb.cfg" "Download"
+Lb_Path=`cat $ToDoPathFromToDoFileThread/.$1_lb.cfg | grep Hitcount_History_File | cut -d= -f2`
+
+$Tool_Path/SampleNetIODownloader $1 $ToDoPathFromToDoFileThread/.$1_hit $Lb_Path 100000000 2> $ToDoPathFromToDoFileThread/.$1_hit_down_result
+Check "$ToDoPathFromToDoFileThread/.$1_hit_down_result" "$1" "hitcount" "Download"
+
+cat $SemiToDoPath/$sumhit | grep -v File | cut -d, -f1,2 > $ToDoPathFromToDoFileThread/.$1_sumhit_temp
+cat -n $SemiToDoPath/$sumhit | grep -v File | cut -d, -f1,2 > $ToDoPathFromToDoFileThread/.$1_sumhit
+Log $1 "sumhit Copy Success"
+
+rm -f $ToDoPathFromToDoFileThread/.$1_lb.cfg
+
+}
+
+Compare(){
+Log $1 "Compare start"
+
+#Exclude passiveInfo in Hitcount
+cat $ToDoPathFromToDoFileThread/.$1_hit | egrep *.mpg | cut -d, -f1,4 > $ToDoPathFromToDoFileThread/.$1_hit_mpg
+cp -f $SystemPath/passiveInfo.txt $ToDoPathFromToDoFileThread/.passiveInfo.txt
+Log $1 "passiveInfo Copy Success"
+rm -f $ToDoPathFromToDoFileThread/$1_passiveInfo_size.txt > /dev/null 2> /dev/null
+Log $1 "Exclude passiveInfo Start"
+        for list in `cat $ToDoPathFromToDoFileThread/.passiveInfo.txt`
+        do
+                cat $ToDoPathFromToDoFileThread/.$1_hit_mpg | grep $list >> $ToDoPathFromToDoFileThread/$1_passiveInfo_size.txt
+                sed -i "/$list/d" $ToDoPathFromToDoFileThread/.$1_hit_mpg
+        done
+sed -i 's/^/1 /' $ToDoPathFromToDoFileThread/$1_passiveInfo_size.txt
+Backup_date=`date +%Y%m%d%H%M`
+cp $ToDoPathFromToDoFileThread/$1_passiveInfo_size.txt $passiveInfoPath/$1_passiveInfo_size_"$Backup_date".txt
+Log $1 "Exclude passiveInfo Finish"
+
+#Exclude New Contents in Hitcount
+rm -f $ToDoPathFromToDoFileThread/$1_New_List > /dev/null 2> /dev/null
+Log $1 "Exclude New Contents Start"
+        for list in `cat $ToDoPathFromToDoFileThread/.$1_hit_mpg`
+        do
+                cat $ToDoPathFromToDoFileThread/.$1_sumhit_temp | grep $list > /dev/null 2> /dev/null
+                if [ $? -eq 1 ]
+                then
+                        echo $list >> $ToDoPathFromToDoFileThread/$1_New_List
+                        sed -i "/$list/d" $ToDoPathFromToDoFileThread/.$1_hit_mpg
+                fi
+        done
+sed -i 's/^/1 /' $ToDoPathFromToDoFileThread/$1_New_List
+Backup_date=`date +%Y%m%d%H%M`
+cp $ToDoPathFromToDoFileThread/$1_New_List $NewContentsPath/$1_New_List_"$Backup_date".txt
+Log $1 "Exclude New Contents Finish"
+
+#Compare Hit with sumhit
+rm -f $ToDoPathFromToDoFileThread/.$1_sumhit_sort_temp > /dev/null 2> /dev/null
+Log $1 "Compare Hit with sumhit Start"
+        for list in `cat $ToDoPathFromToDoFileThread/.$1_hit_mpg`
+        do
+                cat $ToDoPathFromToDoFileThread/.$1_sumhit | grep $list >> $ToDoPathFromToDoFileThread/.$1_sumhit_sort_temp
+        done
+cat $ToDoPathFromToDoFileThread/.$1_sumhit_sort_temp | sort -n > $ToDoPathFromToDoFileThread/.$1_sumhit_sort
+Log $1 "Compare Hit with sumhit Finish"
+
+#reamke hitcount
+cat $ToDoPathFromToDoFileThread/$1_passiveInfo_size.txt $ToDoPathFromToDoFileThread/$1_New_List $ToDoPathFromToDoFileThread/.$1_sumhit_sort > $ToDoPathFromToDoFileThread/.$1_hit_mpg_result 2> /dev/null
+cat $ToDoPathFromToDoFileThread/$1_passiveInfo_size.txt $ToDoPathFromToDoFileThread/$1_New_List $ToDoPathFromToDoFileThread/.$1_sumhit_sort | awk '{print $2}' > $ToDoPathFromToDoFileThread/.$1_hit_mpg_result_mpg 2> /dev/null
+Backup_date=`date +%Y%m%d%H%M`
+cp $ToDoPathFromToDoFileThread/.$1_hit_mpg_result $SemiToDoPath_back/$1_hit_mpg_result_"$Backup_date".txt
+
+#Size Sum
+sum=0
+total=0
+rm -f $ToDoPathFromToDoFileThread/.$1_size_cut > /dev/null 2> /dev/null
+Log $1 "Remove_List_Create Start"
+for list in `cat $ToDoPathFromToDoFileThread/.$1_hit_mpg_result_mpg`
+do
+        grade=`cat $ToDoPathFromToDoFileThread/.$1_hit_mpg_result | grep $list | awk '{print $1}'`
+        size=`cat $ToDoPathFromToDoFileThread/.$1_hit_mpg_result | grep $list | cut -d, -f2`
+        let sum=sum+$size 2> /dev/null
+                if [ $sum -gt $2 ]
+                then
+                        let sum=sum-$size
+                        break
+                elif [ $sum -lt $2 ]
+                then
+                        echo $grade $list >> $ToDoPathFromToDoFileThread/.$1_size_cut
+                else
+                        break
+                fi
+done
+Backup_date=`date +%Y%m%d%H%M`
+cp $ToDoPathFromToDoFileThread/.$1_size_cut $SemiToDoPath_back/$1_size_cut_"$Backup_date".txt
+let total=sum/1024/1024/1024
+
+end_remove_file=`cat $ToDoPathFromToDoFileThread/.$1_size_cut | tail -1 | awk '{print $2}'`
+
+grep -A 99999 "$end_remove_file" $ToDoPathFromToDoFileThread/.$1_hit_mpg_result | grep -v "$end_remove_file" > $ToDoPathFromToDoFileThread/.$1_remove_list_temp
+cat $ToDoPathFromToDoFileThread/.$1_remove_list_temp | sort -nr | awk '{print $2}' | cut -d, -f1 > $ToDoPathFromToDoFileThread/$1_remove_list
+Backup_date=`date +%Y%m%d%H%M`
+cp $ToDoPathFromToDoFileThread/$1_remove_list $SemiToDoPath_back/$1_remove_list_"$Backup_date".txt
+Log $1 "Remove_List_Create Finish"
+Remove_List_Count=`cat $ToDoPathFromToDoFileThread/$1_remove_list | wc -l`
+Remove_List_Size=`cat $ToDoPathFromToDoFileThread/.$1_remove_list_temp | cut -d, -f2 | awk '{sum+=$1} END{print sum/1024/1024/1024" GB"}'`
+Log $1 "Can Remove File Count=$Remove_List_Count, Can Remove File Size=$Remove_List_Size"
+Log $1 "Compare Finish"
+
+#touch $ToDoPathFromToDoFileThread/.$1_Compare_Done
+Log $1 "Script Finish"
+
+}
+
+Remove(){
+while true
+do
+        if [ -e $ToDoPathFromToDoFileThread/$1_remove_list ]
+        then
+                Log $1 "Remove Start"
+                rm -f $ToDoPathFromToDoFileThread/.$1_file_Remove_result > /dev/null 2> /dev/null
+                for list in `cat $ToDoPath/$1_mpg_remove_list`
+                do
+                        $Tool_Path/LBFileDel/LBFileDel $1 $list >> $ToDoPathFromToDoFileThread/.$1_file_Remove_result > $ToDoPathFromToDoFileThread/.$1_Remove_Check
+                        Check "$ToDoPathFromToDoFileThread/.$1_Remove_Check" $1 "$list" "Remove"
+                done
+                Backup_date=`date +%Y%m%d%H%M`
+                cp $ToDoPathFromToDoFileThread/.$1_file_Remove_result
+                cat $ToDoPathFromToDoFileThread/.$1_file_Remove_result | grep fail > /dev/null 2> /dev/null
+                if [ $? -eq 0 ]
+                then
+                        cp $ToDoPathFromToDoFileThread/.$1_file_Remove_result $ErrorPath/$1_file_Remove_result_$Backup_date.txt
+                else
+                        cp $ToDoPathFromToDoFileThread/.$1_file_Remove_result $SuccessPath/$1_file_Remove_result_$Backup_date.txt
+                fi
+                Log $1 "Remove Finish"
+
+                #GFMInfo Create
+                Remove_Total_Count=`cat $ToDoPathFromToDoFileThread/$1_remove_list | wc -l`
+                Remove_Sucess_Count=`cat $ToDoPathFromToDoFileThread/.$1_file_Remove_result | grep success | wc -l`
+                Remove_Fail_Count=`cat $ToDoPathFromToDoFileThread/.$1_file_Remove_result | grep fail | wc -l`
+
+                echo "Date=$date" >> $GFMInfoPath/$1_GFMInfo_$today
+                echo "Remove_Total_Count=$Remove_Total_Count" >> $GFMInfoPath/GFMInfo_$1_$today
+                echo "Remove_Sucess_Count=$Remove_Sucess_Count" >> $GFMInfoPath/GFMInfo_$1_$today
+                echo "Remove_Fail_Count=$Remove_Fail_Count" >> $GFMInfoPath/GFMInfo_$1_$today
+
+        else
+                sleep 300
+        fi
+done
+}
+
+Search(){
+
+cat $GFMInfoPath/GFMInfo_$1_$today | tail -3 2> /dev/null
+
+}
+
+Main(){
+
+        for((i=1;i<=$Node_Count;i++))
+        do
+                for ip in `cat $Script_Path | grep LB$i | grep -v "#" | cut -d= -f2 | cut -d, -f2 | grep -v "|"`
+                do
+                        if [ $1 -eq 11 ]
+                        then
+                                Log $ip "User Selected All!! Script Start"
+                                rm -f $ToDoPathFromToDoFileThread/$ip"_remove_list"
+                                max=0
+                                let max=max+`cat $Script_Path | grep LB$i | cut -d= -f2 | cut -d, -f3`*1024*1024*1024
+                                Src_Down $ip
+                                Compare $ip $max &
+                        #       Remove $ip &
+                        elif [ $1 -eq 22 ]
+                        then
+                                Log $ip "User Selected Start!! Script Start"
+                                max=0
+                                let max=max+`cat $Script_Path | grep LB$i | cut -d= -f2 | cut -d, -f3`*1024*1024*1024
+                                Src_Down $ip
+                                Compare $ip $max &
+                        else
+                                Log $ip "User Selected Remove!! Script Start"
+                        #       Remove $ip &
+                        fi
+                done
+        done
+
+}
+
+case $1 in
+        all)
+                Dir_Check
+                Main 11
+                ;;
+        start)
+                Dir_Check
+                Main 22
+                ;;
+        remove)
+                Dir_Check
+                Main 33
+                ;;
+        search)
+                Search
+                ;;
+        *)
+                echo "option all, start, remove, search"
+                echo "GA 192.168.34.210"
+                echo "SR 192.168.124.130"
+                echo "KH 192.168.117.130"
+                echo "BS 192.168.118.130"
+                echo "CB 192.168.113.40"
+                echo "KB 192.168.123.130"
+esac
+exit

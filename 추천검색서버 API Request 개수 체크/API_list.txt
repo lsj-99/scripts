@@ -1,0 +1,11 @@
+AbstractRecommendationBizcomp
+ContextLoader
+DefaultAnnotationHandlerMapping
+DefaultListableBeanFactory
+DispatcherServlet
+PropertiesFactoryBean
+RecommendationForCFBizComp
+RecommendationForRelationBizComp
+RecommendEngineController
+XmlBeanDefinitionReader
+XmlWebApplicationContext

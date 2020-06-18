@@ -1,0 +1,48 @@
+스크립트 cfg 가이드
+
+###############
+전제조건
+
+1. SampleNetIODownloader_New와 LB_File_Del이 /usr/local/castis/tools 안에 존재(스크립트안에서 변경가능)
+2. Node의 내용은 지역이름,ip로 띄어쓰기 없이 기입
+3. Node(n) 뒤에 DMC, FMS라는 이름이 대/소문자 구분하여 존재할것 ( DMC(O) Dmc(x) dmc(x) )	
+
+###############
+사용방법
+
+1. Hitcount_File.sh start
+NetIO를 이용해 파일을 가져와서 연산 시작
+
+2. Hitcount_File.sh search
+연산한 파일들의 파일수, 파일 크기 조회
+
+2. Hitcount_File.sh remove (local_lb_ip)
+해당 파일을 LB_File_Del을 통해 삭제 요청함 (DMC, FMS ip입력시 오류 문구가뜸)
+
+###############
+지울수 있는 파일 
+
+File_dir_path경로의 Result 아래에 (local_lb_ip)_SO_FMS_Both파일 참조
+
+###############
+로그 위치
+
+File_dir_path경로/log/년도-월/오늘날짜.log
+
+###############
+cfg 가이드
+
+#스크립트가 위치할 곳
+File_dir_path=/home/castis/Hitcount_File
+
+#전제 조건의 2, 3번을 참조
+Node0=DMC_LB,10.10.10.10
+Node1=FMS_LB,20.20.20.20
+Node1=GS_LB,123.140.207.4
+Node2=AY_LB,123.140.19.21
+
+DMC_ip=`cat $File_dir_path/Hitcount_File.sh | grep DMC | grep -v "|" | grep -v " " | cut -d, -f2`
+FMS_ip=`cat $File_dir_path/Hitcount_File.sh | grep FMS | grep -v "|" | grep -v " " | cut -d, -f2`
+
+#LB_File_Del이 위치할 곳
+LB_File_Del_path=/usr/local/castis/tools

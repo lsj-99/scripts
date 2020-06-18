@@ -1,0 +1,71 @@
+Transaction 디렉토리 안에는 총 7개의 경로가 있음
+
+
+4.1 Backup
+작업 후 백업 해야할 파일들이 시간별로 백업되어 있음.
+ - ALL_LIST
+   등급 파일명 파일 크기로 나누어져있음
+ - New_Contents
+   신규 입수 컨텐츠가 기록되어있음
+ - remove_list
+   삭제 대상 파일 mpg명이 들어가있음
+ - remove_list_ALL
+   삭제 대상 파일 등급명 mpg명 파일크기로 나누어져있음
+ - STATIC
+   static파일이 들어가있음
+
+ 
+
+4.2. Error
+파일 삭제후 결과가 하나라도 fail이 기록되면 Error디렉토리로 이동
+
+ 
+
+4.3. GFMInfo
+삭제까지 전부 끝난후 결과를 한눈에 보기 쉽게 알려주는 파일
+Node_Contents_Count: 해당 노드내 전체 컨텐츠 수
+Node_Contetns_Size: 해당 노드내 전체 컨텐츠의 용량 합
+Can_Remove_File_Count: 지울 수 있는 컨텐츠 수
+Can_Remove_File_Size: 지울 수 있는 컨텐츠의 용량 합
+Remove_Success_Count: 삭제 성공 파일 개수
+Remove_Fail_Count: 삭제 실패 파일 개수
+
+ 
+
+4.4 NewContents
+신규 입수 컨텐츠목록이 들어가있음 스크립트 실행마다 하나의 파일로 계속 초기화됨
+
+ 
+
+4.5 Static
+static 컨텐츠 목록이 들어가있음 스크립트 실행마다 하나의 파일로 계속 초기화됨
+
+ 
+
+4.6 Success
+파일 삭제후 결과가 모두 성공하면 Success디렉토리로 이동
+
+ 
+
+4.7 ToDo
+스크립트 실행시 필요한 파일들이 기록되는곳
+ - ALL_LIST
+   신규컨텐츠, static 목록들을 최상위로 올려 작성한 목록
+ - Hit_Remake
+   grade.info에없는 용량을 구하기위해 hitcount와 비교하여 작성한 목록(NewContents와 static은 빠져있음)
+ - remove_list
+   삭제 가능 목록
+
+
+버전 관리
+GFM_Remover(for LG).sh
+- LG전용 버전으로 개발하였으며, static file을 삭제 대상 목록에서 제외 하였음.(LG는 static파일이 없기 때문.)
+- New contents를 제외하는 부분에서 이미 제외를 하였는데 또 한번 더 하는 부분 제외 하였음.
+- start시에 GFMInfo에서 삭제 부분 제외하고 로그 찍게 하였고, Remover시에 덮어쓰는 형태로 만들었음.
+
+GFM_Remover(for DLive).sh
+- New_contents 산출 과정에서 grade부분이 빠져있어 삭제 대상 구성시 치명적인 오류를 불러왔음.
+  해당 부분 수정함.
+grade_info와 Hitcount 서로 없으면 용량 비교 안되는 부분 에 2> /dev/null 추가함
+로그 앞부분에 버전명 추가함.
+

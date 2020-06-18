@@ -1,0 +1,9 @@
+하드코딩 되어 있는 부분이 많으니 수정시 유의해야함
+	ex) CiLoadBalancer.cfg
+
+vod 결과파일이 CiLoadBalacer.cfg의 마지막 ip로 생김.
+	ex) 192.168.40.157 > 157
+
+Bandwidth조절이 없으므로 속도 조절이 필요할때 수정해야함
+	expect에서 수정
+

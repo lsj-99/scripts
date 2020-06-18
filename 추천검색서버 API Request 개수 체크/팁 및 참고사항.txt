@@ -1,0 +1,2 @@
+./스크립트명 xxxx-xx-xx형식으로 사용
+API_list.txt안에는 검색 대상 API를 중복없이 넣어야함

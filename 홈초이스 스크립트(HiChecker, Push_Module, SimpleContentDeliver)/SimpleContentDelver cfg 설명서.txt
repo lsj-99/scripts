@@ -1,0 +1,22 @@
+설치 : FMS LSM
+
+Server_Count=2
+	//배포할 서버 수( 아래 Server(n)_Address의 개수를 따른다.
+Server0_Address=172.16.11.5,/data1
+	//ip, Destination 경로 순으로 기입
+Server1_Address=172.16.0.253,/data1
+	//?ip, Destination 경로 순으로 기입
+Log_Directory=/var/log/castis/Simple
+	//Log 경로
+Watch_Period_Sec=5
+	//감시 주기
+Watch_Directory=/home/castis/Push_test
+	//감시 경로
+Max_Count=1
+	//n개일때 부터 동작을 시작
+Copy_Bitrate=300000000
+	//배포 속도
+Copy_Count=2
+	//Copy수
+tool_path=/usr/local/castis/tools
+	//SampleNetIO tool 경로

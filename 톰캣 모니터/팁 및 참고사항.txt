@@ -1,0 +1,4 @@
+3초마다 감시하게 되어있음
+OutOfMemoryError 문구를 감지하여
+감지가 되면 killtomcat.sh 스크립트를 실행시키고 sleep_period_sec 만큼 대기 후 다시 감지
+감지가 안되면 감시주기마다 계속 감지함

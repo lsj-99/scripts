@@ -1,0 +1,16 @@
+#!/bin/bash
+
+live=/home/castis/API_test/live
+new=/home/castis/API_test/new
+
+for list_1 in `find $live -name '*.txt'`
+do
+        dos2unix $list_1
+        sed -i 's/ //g' $list_1
+done
+
+for list_2 in `find $new -name '*.txt'`
+do
+        dos2unix $list_2
+        sed -i 's/ //g' $list_2
+done

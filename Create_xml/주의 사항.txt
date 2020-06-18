@@ -1,0 +1,7 @@
+Source.mpg
+Source.jpg
+ADI.xml
+ADI.dtd
+Create_xml.sh 5개 전부 있어야됨
+
+StartNumber부터 i<= 까지 만듬

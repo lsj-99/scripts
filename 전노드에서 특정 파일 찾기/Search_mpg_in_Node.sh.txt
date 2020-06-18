@@ -1,0 +1,21 @@
+#!/bin/bash
+
+hitcount_path=/data2/FailOver
+tool_path=/usr/local/castis/tools
+copy_bitrate=50000000
+
+result=`dirname $0`
+version=v1.0.0
+
+rm -f *Result
+for lsm_list in `cat LSM_ip`
+do
+        place=`echo $lsm_list | cut -d, -f1`
+        ip=`echo $lsm_list | cut -d, -f2`
+        $tool_path/SampleNetIODownloader $ip $result/.$place.hitcount $hitcount_path/.hitcount.history $copy_bitrate
+
+        for mpg in `cat list.txt`
+        do
+                cat $result/.$place.hitcount | grep $mpg >> $result/$place.Result
+        done
+done

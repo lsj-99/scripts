@@ -1,0 +1,27 @@
+#!/bin/bash
+
+live=/home/castis/20150630_GCS/GCS_NEW
+new=/home/castis/20150630_GCS/GCS_LIVE
+
+for list_1 in `find $live -name '*.txt' | grep -v result`
+do
+        list_1_temp=`echo $list_1 | cut -d"/" -f6,7,8,9,10,11,12,13,14,15,16,17,18,19,20`
+        for list_2 in `find $new -name '*.txt' | grep $list_1_temp | grep -v result`
+        do
+                dir=`dirname $list_2`
+                file=`basename $list_2`
+                #echo $list_2 >> $dir/result_$file
+                for list_3 in `cat $list_2 | egrep -v "genre|productName|synopsis|title|seriesName|starring|director|category|assetTitle|writer"`
+                do
+                        #name=`echo $list_3 | cut -d">" -f1` > /dev/null 2> /dev/null
+                        cat $list_1 | grep "$list_3" > /dev/null 2> /dev/null
+                        if [ $? -eq 1 ]
+                        then
+                                echo $list_3 >> $dir/.result_$file
+                        else
+                                continue
+                        fi
+                done
+                cat $dir/.result_$file | sort | uniq 2> /dev/null >> $dir/result_$file
+        done
+done

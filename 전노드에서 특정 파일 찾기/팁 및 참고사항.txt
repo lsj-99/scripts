@@ -1,0 +1,14 @@
+1. 사용 목적
+LSM_ip에 기입 되어 있는 ip에서 특정 컨텐츠가 hitcocunt에 있는지 확인하기 위함.
+
+2. 사용 방법
+LSM_ip에는 노드명,ip로 기입한다
+list.txt에는 찾고 싶은 파일의 mpg명만 기입한다.
+
+3. 결과 값
+hitcount는 .노드명,hitcount로 기록되며 list.txt와 비교하여 있는 파일들에 대한 결과 값을 노드명.Result로 남긴다
+
+4. 주의 사항
+	4.1 시작시 노드명.Result파일을 전부 지운다.
+	4.2 hitcount는 따로 삭제하지 않으며, SampleNetIODownloader가 덮어씌워진다.
+	4.3 /data1, /data2/에 있는지 확인 할 수는 없다.[추가 패치(expect를 이용하여 찾는방법)가 필요해 보임]
